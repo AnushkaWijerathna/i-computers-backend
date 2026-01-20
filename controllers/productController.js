@@ -56,22 +56,7 @@ export async function getAllProducts(req,res) {
 
     }
     else{
-        // Product.find({isAvailability : true}).then(
-            
-            
-        //     (products) => 
-        //         res.json(products)
-            
-        // ).catch(
-
-        //     (error) => {
-        //         res.status(500).json({
-        //             message : "Error while fetching products",
-        //             error : error.message
-        //         })
-        //     }
-        // )
-
+       
             const products = await Product.find({isAvailability:true})
             res.json(products)
 
