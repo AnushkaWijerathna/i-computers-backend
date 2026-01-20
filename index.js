@@ -3,11 +3,15 @@ import mongoose from "mongoose"
 import userRouter from "./routes/userRouter.js"
 import jwt from "jsonwebtoken"
 import productRouter from "./routes/productRouter.js"
+import cors from 'cors';
+import dotenv from "dotenv";
 
-let app = express() // express eke thiyna fully furbished backend code eka (framework) app kiyla variable ekkta danwa
+const app = express() // express eke thiyna fully furbished backend code eka (framework) app kiyla variable ekkta danwa
 
-//let dala hadana variable aye change krnna puluwn, const dala hadana vairable change krnna  baa
-const mongoURI =  "mongodb+srv://admin:1234@cluster0.ewkms58.mongodb.net/?appName=Cluster0" // MongoDB connection string eka
+ // .env file eke thiyana environment variables load krnwa
+dotenv.config();
+
+const mongoURI = process.env.MONGO_URL;
 
 mongoose.connect(mongoURI).then(
     () => {
@@ -18,8 +22,19 @@ mongoose.connect(mongoURI).then(
 //middleware ekak hdwna...backend ekta ena request eke data piliwelata hadala ilngata labenna one thanta ynwa (ex:- http requst --> JSON)
 app.use(express.json()) 
 
+// Enable CORS for all routes (Allow requests from different origins/ports)
+//CORS policy --> Katawth enna denne na block krnwa, policy eka disable krnna one Frontend ekta backend API call krnna
+app.use(cors()); 
+
+
+
+
 //User Authentication walata adala security middleware eka hdanwa
 //"next" function eken req eka ilnga kenata direct forward krnwa
+/*  /login, /register → public
+    /products, /orders, /admin → protected
+    JWT middleware should guard only protected routes*/
+
 app.use(
     (req,res,next) => {
         
@@ -32,7 +47,7 @@ app.use(
          
             //Decrypting to verify the token (using "jwt.verify()"), third parameter is the arrow function(What to do if verified)
             //content has the user data encrypted in the token
-            jwt.verify(token,"secretKey96$2025",
+            jwt.verify(token,process.env.JWT_SECRET,
                 (error,content) =>{
             
                     if (content == null) {
@@ -60,9 +75,9 @@ app.use(
     }
 )
 
-app.use("/users",userRouter)
+app.use("/api/users",userRouter)
 
-app.use("/products",productRouter)
+app.use("/api/products",productRouter)
 
 app.listen(5000, ()=> {
     console.log("Server running on port 5000");
