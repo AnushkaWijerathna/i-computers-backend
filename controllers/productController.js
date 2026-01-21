@@ -69,15 +69,16 @@ export async function getAllProducts(req,res) {
     }
 }
 
-export async function deleteProduct(req,res) {
-    try {
-        if (!isAdmin(req)) {
-        return res.status(403).json({
-            message : "Only admins can delete products"
-        })
-
-        return
+export async function deleteProduct(req, res) {
+  try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({
+        message: "Only admins can delete products"
+      });
     }
+  
+
+
 
     //Get the productID from the request parameters... req.params.productID → for URL parameters (/:productID) and 
     //req.body.productID → for JSON body data (sent in POST/PUT requests)
