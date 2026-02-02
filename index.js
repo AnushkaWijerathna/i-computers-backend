@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken"
 import productRouter from "./routes/productRouter.js"
 import cors from 'cors';
 import dotenv from "dotenv";
+import orderRouter from "./routes/orderRouter.js"
 
 const app = express() // express eke thiyna fully furbished backend code eka (framework) app kiyla variable ekkta danwa
 
@@ -78,6 +79,9 @@ app.use(
 app.use("/api/users",userRouter)
 
 app.use("/api/products",productRouter)
+
+app.use("/api/orders",orderRouter)
+
 
 app.listen(5000, ()=> {
     console.log("Server running on port 5000");
