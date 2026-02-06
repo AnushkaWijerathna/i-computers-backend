@@ -116,7 +116,7 @@ export async function getOrders(req, res) {
     return;
   }
 
-  if (!isAdmin(req)) {
+  if (isAdmin(req)) {
     const orders = await Order.find().sort({ date: -1 });
     res.json(orders);
   } else {

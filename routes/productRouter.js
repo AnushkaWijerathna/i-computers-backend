@@ -1,19 +1,26 @@
-import express from "express"
-import { createProduct, deleteProduct, getAllProducts, getProductByID, updateProduct } from "../controllers/productController.js"
+import express from "express";
+import {
+  createProduct,
+  deleteProduct,
+  getAllProducts,
+  getProductByID,
+  searchProducts,
+  updateProduct,
+} from "../controllers/productController.js";
 
-const productRouter = express.Router()
+const productRouter = express.Router();
 
-productRouter.get("/",getAllProducts)
+productRouter.get("/", getAllProducts);
 
-productRouter.post("/",createProduct)
+productRouter.post("/", createProduct);
 
-productRouter.get("/:productID",getProductByID)
+productRouter.get("/search/:query", searchProducts);
+
+productRouter.get("/:productID", getProductByID);
 
 //"/",":"  passe ena parameter eka product id eka wenwa...ee pID ekta equal eka delete krnwa
-productRouter.delete("/:productID",deleteProduct)
+productRouter.delete("/:productID", deleteProduct);
 
-productRouter.put("/:productID",updateProduct)
+productRouter.put("/:productID", updateProduct);
 
-
-
-export default productRouter
+export default productRouter;

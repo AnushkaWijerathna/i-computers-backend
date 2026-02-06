@@ -3,7 +3,21 @@ import bcrypt from "bcrypt"; //Hashing walata gnna import eka
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
+import Otp from "../models/Otp.js";
 dotenv.config();
+
+//Message eheta mehata ywna ekata (forget password ekedi) one krna transporter eka
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: "anushkaprojects1128@gmail.com",
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 export function createUser(req, res) {
   const data = req.body;
@@ -43,6 +57,12 @@ export function loginUser(req, res) {
       } else {
         const user = users[0]; //two user variables are: In different functions In different scopes Do NOT conflict with each other
 
+        //block check krnwa (meka liyawenne awasaneta adminUser page haduwama course ekedi nm awasana dwase googleLogin eketh same happen)
+        if (user.isBlock) {
+          return res.status(403).json({
+            message: "User is blocked",
+          });
+        }
         //password compare krnne "compareSync" use krla
         const isPasswordCorrect = bcrypt.compareSync(password, user.password); //"user.passsword" kiynne database eke save krpu PW eka
 
@@ -102,6 +122,7 @@ export function getUser(req, res) {
   res.json(req.user);
 }
 
+//google login
 export async function googleLogin(req, res) {
   console.log(req.body.token);
   try {
@@ -149,6 +170,11 @@ export async function googleLogin(req, res) {
         role: newUser.role,
       });
     } else {
+      if (user.isBlock) {
+        return res.status(403).json({
+          message: "User is blocked",
+        });
+      }
       const payload = {
         email: user.email,
         firstname: user.firstname,
@@ -170,6 +196,147 @@ export async function googleLogin(req, res) {
     }
   } catch (error) {
     console.error(error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+//forget password  -->> verify OTP
+export async function verifyOtpAndUpdatePassword(req, res) {
+  try {
+    const { email, otp } = req.body;
+    const newPassword = req.body.newPassword;
+
+    //OTP ekk thiynwda blnwda check krnwa
+    const otpRecord = await Otp.findOne({ email: email, otp: otp });
+
+    if (otpRecord == null) {
+      res.status(404).json({
+        message: "Invalid OTP",
+      });
+      return;
+    }
+
+    await Otp.deleteMany({ email: email });
+
+    //Otp ekk thiye nm aluth password hash krla userw update krnwa
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+    await User.updateOne(
+      { email: email },
+      {
+        $set: { password: hashedPassword, isEmailVerified: true },
+      },
+    );
+
+    res.json({
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+//forget password  -->> email eka send krnwa
+export async function sendOTP(req, res) {
+  try {
+    const email = req.params.email;
+
+    //request eke parameter eke email ekata samana email thiyenawada kiyala check krnwa
+    const user = await User.findOne({ email: email });
+
+    if (user == null) {
+      res.status(404).json({
+        message: "User not found",
+      });
+      return;
+    }
+
+    //Danata DB eke adala email ekta yawpu otp thiynwa nm ewa delete krnwa
+    await Otp.deleteMany({ email: email });
+
+    //otp generate krnwa
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    //otp save krnwa
+    const otp = new Otp({
+      email: email,
+      otp: otpCode,
+    });
+    await otp.save();
+
+    const message = {
+      from: "anushkaprojects1128@gmail.com",
+      to: email,
+      subject: "OTP for password reset",
+      text: "Your OTP is: " + otpCode,
+    };
+
+    transporter.sendMail(message, (err, info) => {
+      if (err) {
+        res.status(500).json({
+          message: "Failed to send OTP",
+          error: err.message,
+        });
+      } else {
+        res.json({
+          message: "OTP sent successfully",
+        });
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+export async function getAllUsers(req, res) {
+  if (!isAdmin(req)) {
+    return res.status(403).json({
+      message: "Unauthorized",
+    });
+  }
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+}
+
+export async function updateUserStatus(req, res) {
+  if (!isAdmin(req)) {
+    return res.status(403).json({
+      message: "Unauthorized",
+    });
+  }
+  const email = req.params.email;
+
+  if (req.user.email === email) {
+    return res.status(403).json({
+      message: "You cannot block yourself",
+    });
+  }
+
+  const isBlock = req.body.isBlock;
+  try {
+    await User.updateOne({ email: email }, { $set: { isBlock: isBlock } });
+    res.json({
+      message: "User status updated successfully",
+    });
+  } catch (error) {
     res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
